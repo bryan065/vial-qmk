@@ -1,0 +1,519 @@
+/*
+  Copyright (c) 2022 Bryan065
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+  THE SOFTWARE.
+*/
+
+#include "quantum.h"
+#include "rgb.h"
+#include "bryan065.h"
+#include <lib/lib8tion/lib8tion.h>
+
+/* Structure for RGB_MATRIX layer indicator
+ *   Note: Layer 0 aka base layer will never show any RGB layer indication
+ *
+ *   {FLAG, HUE, SATURATION, BRIGHTNESS}
+ *
+ *   FLAG:
+ *     TRUE  = Custom indicator color
+ *     FALSE = Transparent, will show user RGB mode/animation
+ *     Note: FLAG will have to be set to TRUE for any of the effects below to work
+ *
+ *   HUE:
+ *     Color of the layer indicator
+ *
+ *   SATURATION:
+ *     Saturation of the layer indicator
+ *
+ *   BRIGHTNESS:
+ *     0        = Don't show layer indicator (RGB's off)
+ *     0 to 255 = No effect
+ *
+ */
+__attribute__((weak))
+struct RGB_MATRIX_INDICATOR indicator_matrix[8] = {
+    {NULL, 0, 0, 0 },                                   // Layer 0, base layer, no effect
+
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 2
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 3
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 4
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 5
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 6
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 7
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS}      // Layer 8
+};
+
+/* Structure for RGB underglow layer indicator
+ *   Note: Layer 0 aka base layer will never show any RGB layer indication
+ *
+ *   {FLAG, HUE, SATURATION, BRIGHTNESS}
+ *
+ *   FLAG:
+ *     TRUE  = Custom indicator color
+ *     FALSE = Transparent, will show user RGB mode/animation
+ *     Note: FLAG will have to be set to TRUE for any of the effects below to work
+ *
+ *   HUE:
+ *     Color of the layer indicator
+ *
+ *   SATURATION:
+ *     Saturation of the layer indicator
+ *
+ *   BRIGHTNESS:
+ *     0        = Don't show layer indicator (RGB's off)
+ *     0 to 255 = No effect
+ *
+ */
+__attribute__((weak))
+struct RGB_MATRIX_INDICATOR indicator_underglow[8] = {
+    {NULL, 0, 0, 0 },                                   // Layer 0, base layer, no effect
+
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 2
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 3
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 4
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 5
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 6
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 7
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS}      // Layer 8
+};
+
+HSV          rgb_original_hsv;
+uint16_t     fade_timer;
+uint16_t     boot_timer;
+int8_t       fade_status = 0;
+int8_t       boot_status = 0;
+
+bool  RGB_MOD_FLAG;
+bool  RGB_UNDERGLOW_FLAG;
+bool  RGB_MATRIX_FLAG;
+
+//===============Custom Functions=========================//
+void rgb_matrix_fade_in(void) {
+    fade_timer = timer_read();
+    rgb_original_hsv = rgb_matrix_config.hsv;  //grab current V value to restore
+    rgb_matrix_sethsv_noeeprom( rgb_matrix_config.hsv.h, rgb_matrix_config.hsv.s, 0);
+    fade_status = 1;
+}
+
+void rgb_matrix_fade_out(void) {
+    fade_timer = timer_read();
+    rgb_original_hsv = rgb_matrix_config.hsv;  //grab current V value to restore
+    fade_status = -1;
+}
+
+void rgb_matrix_fade_out_noeeprom(void) {
+    fade_timer = timer_read();
+    rgb_original_hsv = rgb_matrix_config.hsv;  //grab current V value to restore
+    fade_status = -2;
+}
+
+// Splash animation math
+HSV SPLASH_math2(HSV hsv, int16_t dx, int16_t dy, uint8_t dist, uint16_t tick) {
+    uint16_t effect = tick - dist;
+    if (effect > 255) effect = 255;
+    hsv.h += effect;
+    hsv.v = qadd8(hsv.v, 255 - effect);
+    return hsv;
+} // End of splash math functions
+
+// Boot animation, run only if RGB_MATRIX_ENABLED is defined and if the matrix is enabled.
+void rgb_matrix_boot_anim(uint8_t boot_anim) {
+    #if defined (RGB_MATRIX_ENABLE)
+        if (rgb_matrix_config.enable) {
+            rgb_matrix_sethsv_noeeprom( rgb_matrix_config.hsv.h, rgb_matrix_config.hsv.s, RGB_MATRIX_MAXIMUM_BRIGHTNESS);   // Set brightness to maximum allowed before playing animation
+            rgb_matrix_set_speed_noeeprom(64);                                                                              // Set animation speed to default before playing animation
+            boot_timer = timer_read();
+            boot_status = boot_anim;
+        }
+    #endif
+} // End of boot animation
+
+//===============Custom Functions End=====================//
+
+//==============Layer indicator code==============//
+layer_state_t layer_state_set_user(layer_state_t state) {
+    switch (get_highest_layer(state)) {
+        case 0:
+            if (RGB_MOD_FLAG != false) { RGB_MOD_FLAG = false; }    // Set RGB_MOD_FLAG to false on the default layer
+            break;                                                  // This is to disable per-key indicator on the default layer
+    }
+    return state;
+}
+//==============Layer indicator code end==========//
+
+/* Boot_status
+*   1 = Run splash boot animation
+*   0 = Don't run anim / anim complete
+*/
+//==========Per Layer RGB Matrix indicators========//
+void rgb_matrix_indicators_advanced_rgb(uint8_t led_min, uint8_t led_max) {
+    // Boot animation
+    void rgb_matrix_boot_anim_runner(uint8_t originx, uint8_t originy) {
+        for (uint8_t i = led_min; i < led_max; i++) {
+                    HSV hsv = rgb_matrix_config.hsv;
+                    hsv.v   = 0;
+                    for (uint8_t j = 0; j < 1; j++) {
+                        int16_t  dx   = g_led_config.point[i].x - originx;     // X origin of splash animation
+                        int16_t  dy   = g_led_config.point[i].y - originy;     // y origin of splash animation
+                        uint8_t  dist = sqrt16(dx * dx + dy * dy);
+                        uint16_t tick = scale16by8(timer_elapsed(boot_timer), qadd8(rgb_matrix_config.speed, 1));
+                        hsv           = SPLASH_math2(hsv, dx, dy, dist, tick);
+                    }
+                    hsv.v   = scale8(hsv.v, rgb_matrix_config.hsv.v);
+                    RGB rgb = hsv_to_rgb(hsv);
+                    rgb_matrix_set_color(i, rgb.r, rgb.g, rgb.b);
+                }
+    }
+
+    // Boot animation Code
+    switch(boot_status) {
+    case 1:
+        if (timer_elapsed(boot_timer) >= STARTUP_ANIM_TIME) {                                                   // If timer is > boot animation time, load the saved RGB mode and fade in
+            rgb_matrix_sethsv_noeeprom( rgb_matrix_config.hsv.h, rgb_matrix_config.hsv.s, rgb_original_hsv.v);  // Reset HSV.v to original value
+            rgb_matrix_set_speed_noeeprom(rgb_matrix_config.speed);                                             // Reset speed to original value
+            eeprom_read_block(&rgb_matrix_config, EECONFIG_RGB_MATRIX, sizeof(rgb_matrix_config));
+            rgb_matrix_mode_noeeprom(rgb_matrix_config.mode);                                                   // Load original mode
+            rgb_matrix_fade_in();                                                                               // Fade in after boot animation is complete
+            boot_status = 0;
+        } else {                                                                                                // Otherwise, run boot animation
+            rgb_matrix_boot_anim_runner(BOOT_ANIM_X,BOOT_ANIM_Y);
+        }
+        return;
+    case 2:
+        if (timer_elapsed(boot_timer) >= STARTUP_ANIM_TIME) {                                                   // If timer is > boot animation time, load the saved RGB mode and fade in
+            rgb_matrix_sethsv_noeeprom( rgb_matrix_config.hsv.h, rgb_matrix_config.hsv.s, rgb_original_hsv.v);  // Reset HSV.v to original value
+            rgb_matrix_set_speed_noeeprom(rgb_matrix_config.speed);                                             // Reset speed to original value
+
+            timeout = true;
+            rgb_matrix_disable_noeeprom();
+
+            boot_status = 0;
+        } else {                                                                                                // Otherwise, run boot animation
+            rgb_matrix_boot_anim_runner(112,64);
+        }
+        return;
+    }   // End boot animation code
+
+    // Layer indicator code
+    if (get_highest_layer(layer_state) > 0 && !RGB_MOD_FLAG) {
+        uint8_t layer = get_highest_layer(layer_state);
+
+        // Underglow layer indicator
+        HSV hsv = rgb_matrix_config.hsv;
+        hsv.s   = 255;  // Ensure RGB colors are full saturation regardless of user's setting
+
+        // Apply underglow indicator
+        RGB_UNDERGLOW_FLAG  = indicator_underglow[layer].flag;
+        hsv.h               = indicator_underglow[layer].hsv_h;
+        hsv.s               = indicator_underglow[layer].hsv_s;
+
+        // Set hsv.v to zero if you want the layer indicator to be off completely
+        if (indicator_underglow[layer].hsv_v == 0) {
+            hsv.v = 0;
+        }
+
+        //apply the colors to the layers, if configured. Otherwise, the user's RGB mode will show through
+        RGB rgb = hsv_to_rgb(hsv);
+
+        if (RGB_UNDERGLOW_FLAG) {
+            for (uint8_t i = led_min; i <= led_max; i++) {
+                if (HAS_FLAGS(g_led_config.flags[i], 0x02)) { // 0x02 == LED_FLAG_UNDERGLOW
+                    RGB_MATRIX_INDICATOR_SET_COLOR(i, rgb.r, rgb.g, rgb.b);
+                }
+            }
+        }
+        // End of underglow layer indicator
+
+        // Per configured key indicator
+        for (uint8_t row = 0; row < MATRIX_ROWS; ++row) {
+            for (uint8_t col = 0; col < MATRIX_COLS; ++col) {
+                uint8_t index = g_led_config.matrix_co[row][col];
+
+                // Comparing LED index to matrix for configured keys or override keys
+                if (index >= led_min && index <= led_max && index != NO_LED) {
+
+                    uint16_t keycheck = keymap_key_to_keycode(layer, (keypos_t){col,row});
+                    HSV hsv = rgb_matrix_config.hsv;
+                    hsv.s   = 255;  // Ensure RGB colors are full saturation regardless of user's setting
+
+                    /* If key is configured aka KC_TRNS, set keys to a specific color:
+                     *   PERKEY_HUE = color of configured keys
+                     *   PERKEY_SAT = saturation of configured keys
+                     *
+                     * Per key override color:
+                     *   Will override colors on specific keys, aka RESET
+                     *
+                     * Per key overide color with toggle indicator
+                     *   Will override colors on specific keys and toggle to a different color
+                     *   aka NK_TOGG showing nkro status
+                     *   or  GUI_TOG showing gui status
+                     *
+                     *  hsv.h = hue
+                     *  hsv.s = saturation
+                     *  hsv.v = DO NOT CHANGE
+                     */
+                    if (keycheck > KC_TRNS) {
+
+                        // Per key overrides
+                        switch (keycheck) {
+                            case RESET:
+                                hsv.h = 0;  // RED
+                                break;
+                            case LCTL(KC_BSPC):
+                                hsv.h = 0;  // RED
+                                break;
+                            case EEP_RST_R:
+                                hsv.h = 0;  // RED
+                                break;
+
+                            /* Per key overrides with toggle colors
+                             *
+                             *   Set the hue in the first `if statement`  for the color when toggled on
+                             *   Set the hue in the second `if statement` for the color when toggled off
+                             *      If you don't want to set a second color when toggled off, replace `hsv.h` with `goto perkey;`
+                             *
+                             *  hsv.h = hue
+                             *  hsv.s = saturation
+                             *  hsv.v = DO NOT CHANGE
+                             */
+                            case NK_TOGG:
+                                if (keymap_config.nkro == 1) {
+                                    hsv.h = 85; // GREEN if nkro is enabled
+                                } else {
+                                    //hsv.h = 0 ; // RED if nkro is enabled. Comment out to keep same color as the rest of the perkey
+                                    goto perkey;
+                                }
+                                break;
+                            case GUI_TOG:
+                                if (keymap_config.no_gui == 1) {
+                                    hsv.h = 0;  // RED if GUI is disabled
+                                }
+                                else {
+                                    //hsv.h = 85; // GREEN if GUI is enabled. Comment out to keep same color as the rest of the perkey
+                                    goto perkey;
+                                }
+                                break;
+
+                            default:
+                            perkey:
+                                hsv.h = PERKEY_HUE;
+                                hsv.s = PERKEY_SAT;
+                                break;
+                        }
+
+                        // Make the key lights a bit brighter
+                        if (hsv.v < (RGB_MATRIX_MAXIMUM_BRIGHTNESS - 30)) { hsv.v += 30; }
+                        else { hsv.v = RGB_MATRIX_MAXIMUM_BRIGHTNESS; }
+
+                        // Apply color to configured keys
+                        rgb = hsv_to_rgb(hsv);
+                        RGB_MATRIX_INDICATOR_SET_COLOR(index, rgb.r, rgb.g, rgb.b);
+                    }
+                    else {
+                        //RGB_MATRIX
+                        #ifdef DISABLE_LAYER_INDICATOR_MATRIX
+                            // Hide RGB_MATRIX animations
+                            RGB_MATRIX_FLAG = true;
+                            hsv.v = 0;
+                        #else
+                            // Per layer indicator ONLY on the RGB_MATRIX (not underglow)
+                            RGB_MATRIX_FLAG = indicator_matrix[layer].flag;
+                            hsv.h           = indicator_matrix[layer].hsv_h;
+                            hsv.s           = indicator_matrix[layer].hsv_s;
+
+                            // Set hsv.v to zero if you want the layer indicator to be off completely
+                            if (indicator_matrix[layer].hsv_v == 0) {
+                                hsv.v = 0;
+                            }
+                        #endif
+
+                        // Apply colors to the non-configured keys aka layer indicator. Otherwise, the user's RGB mode will show through
+                        RGB rgb = hsv_to_rgb(hsv);
+
+                        if (RGB_MATRIX_FLAG) {
+                            RGB_MATRIX_INDICATOR_SET_COLOR(index, rgb.r, rgb.g, rgb.b);
+                        }
+                    }
+                } // End of comparison code
+            }
+        } // End of per configured key indicator
+
+    } // End of layer indicator code
+
+    #ifdef CYBER77
+        // Caps lock / num lock code
+        if (host_keyboard_led_state().caps_lock) {
+            HSV hsv = rgb_matrix_config.hsv;
+            hsv.s = 0;                                                                  // Use white LED for indicator
+
+            if (hsv.v < 100) { hsv.v = 100; }                                           // Ensure the caps/num lock has a minimum brightness and doesn't exceed the defined max brightness
+            else if (hsv.v < (RGB_MATRIX_MAXIMUM_BRIGHTNESS - 30)) { hsv.v += 30; }     //   Also makes the caps/num lock a bit brighter than the rest of the LED's
+            else { hsv.v = RGB_MATRIX_MAXIMUM_BRIGHTNESS; }
+
+
+            RGB rgb = hsv_to_rgb(hsv);
+            RGB_MATRIX_INDICATOR_SET_COLOR(3, rgb.r, rgb.g, rgb.b);                     // Assuming caps lock is at led #3
+        }
+        if (host_keyboard_led_state().num_lock) {
+            HSV hsv = rgb_matrix_config.hsv;
+            hsv.s = 0;
+
+            if (hsv.v < 100) { hsv.v = 100; }
+            else if (hsv.v < (RGB_MATRIX_MAXIMUM_BRIGHTNESS - 30)) { hsv.v += 30; }
+            else { hsv.v = RGB_MATRIX_MAXIMUM_BRIGHTNESS; }
+
+            RGB rgb = hsv_to_rgb(hsv);
+            RGB_MATRIX_INDICATOR_SET_COLOR(5, rgb.r, rgb.g, rgb.b);                     // Assuming num lock is at led #5
+        } // End of caps/num lock code
+    #endif
+
+    rgb_matrix_indicators_advanced_keymap(led_min, led_max);
+}
+
+/* fade_status
+*    1 = fade in
+*   -1 = fade out
+*   -2 = fade out, no eeprom
+*/
+//=============================================//
+void rgb_matrix_indicators_rgb(void) {
+    // Fade animation code
+    HSV hsv = rgb_matrix_get_hsv();
+    switch(fade_status) {
+        case 1:     // Fade in code, slows down fade in to every FADE_TIME ms
+            if ((timer_elapsed(fade_timer) > FADE_TIME) && (hsv.v <= rgb_original_hsv.v)) {
+                rgb_matrix_increase_val_noeeprom();
+                fade_timer = timer_read();
+            } else if (hsv.v >= rgb_original_hsv.v) {   // End code, when brightness has reached max configured
+                fade_status = 0;
+                rgb_matrix_sethsv( rgb_matrix_config.hsv.h, rgb_matrix_config.hsv.s, rgb_original_hsv.v);
+            }
+            return;
+        case -1:    // Fade out code, slows down fade in to every FADE_TIME ms
+            if ((timer_elapsed(fade_timer) > FADE_TIME) && (hsv.v > 0)) {
+                rgb_matrix_decrease_val_noeeprom();
+                fade_timer = timer_read();
+            } else if (hsv.v == 0) {    // End code, when brightness has reached 0
+                fade_status = 0;
+                rgb_matrix_sethsv_noeeprom( rgb_matrix_config.hsv.h, rgb_matrix_config.hsv.s, rgb_original_hsv.v);
+                rgb_matrix_disable();
+            }
+            return;
+        case -2:    // Fade out code, no EEPROM. Slows down fade in to every FADE_TIME ms
+            if ((timer_elapsed(fade_timer) > FADE_TIME) && (hsv.v > 0)) {
+                rgb_matrix_decrease_val_noeeprom();
+                fade_timer = timer_read();
+            } else if (hsv.v == 0) {    // End code, when brightness has reached max configured
+                fade_status = 0;
+                rgb_matrix_sethsv_noeeprom( rgb_matrix_config.hsv.h, rgb_matrix_config.hsv.s, rgb_original_hsv.v);
+                rgb_matrix_disable_noeeprom();
+            }
+            return;
+    } // End of fade animation code
+
+    // Custom RGB timeout code that includes fades - FADE OUT
+    #if (RGB_DISABLE_TIMEOUT == 0) && (RGB_CUSTOM_TIMEOUT_DELAY > 0)
+        if (rgb_matrix_config.enable) {
+            #if (defined (RGB_MATRIX_ENABLE)) || (defined (RGBLIGHT_ENABLE))
+                if ((timer_elapsed32(rgb_anykey_timeout) > UINT32_MAX)) {
+                    rgb_anykey_timeout = UINT32_MAX;
+                } else if ((timer_elapsed32(rgb_anykey_timeout) > (uint32_t)RGB_CUSTOM_TIMEOUT_DELAY) && (rgb_matrix_config.enable)) {
+                    rgb_matrix_fade_out_noeeprom();
+                    timeout = true;
+                }
+            #endif
+        }
+    #endif // End of custom RGB timeout code - FADE OUT
+    rgb_matrix_indicators_keymap();
+}
+
+//==========Per Layer RGB Matrix indicators========//
+
+//=================Keycode Functions ================//
+bool process_record_rgb(uint16_t keycode, keyrecord_t *record) {
+    // Custom timeout code to add fades - FADE IN
+    #if (RGB_DISABLE_TIMEOUT == 0) && (RGB_CUSTOM_TIMEOUT_DELAY > 0)
+        #if (defined (RGB_MATRIX_ENABLE)) || (defined (RGBLIGHT_ENABLE))
+            if (record->event.pressed) {
+                rgb_anykey_timeout = timer_read32();    // Reset timeout timer on any key press
+
+                if (timeout == true) {                  // Reset timer and turn on backlight to last mode if timed-out
+                    timeout = false;
+                    rgb_matrix_enable_noeeprom();
+                    rgb_matrix_fade_in();
+                }
+            }
+        #endif
+    #endif // End of custom timeout code - FADE IN
+
+
+    // Custom keycode, on key release
+    if (!record->event.pressed) {
+        switch(keycode) {
+        case RGB_MODE_FORWARD ... RGB_SPD:  // Add RGB_MOD_FLAG = true to all RGB modification keys.
+            RGB_MOD_FLAG = true;            //   This is to let the per key indicator know to stop if the RGB settings are modified so
+            return true;                   //   the user can see the changes again without the layer indicator in the way
+        case RGB_TOG:   // Override original RGB_TOG function and add fades
+            #if (defined (RGB_MATRIX_ENABLE)) || (defined (RGBLIGHT_ENABLE))
+                if (rgb_matrix_is_enabled()) {
+                    rgb_matrix_fade_out();
+                } else if (!rgb_matrix_is_enabled()) {
+                    rgb_matrix_enable();
+                    rgb_matrix_fade_in();
+                }
+            #endif
+            return false;
+        case MON_OFF:
+            SEND_STRING(SS_TAP(X_LGUI) SS_DELAY(500) "mon" SS_DELAY(500) SS_TAP(X_ENT));
+
+            // Run a shutdown animation before kb goes to sleep
+            #if (defined (RGB_MATRIX_ENABLE)) || (defined (RGBLIGHT_ENABLE))
+                rgb_matrix_boot_anim(2);
+            #endif
+            return false;
+        }
+    }
+    return process_record_keymap(keycode, record);
+}
+//==============Keycode Functions End=============//
+
+//==========RGB init/suspend functions========//
+void keyboard_post_init_rgb(void) {
+    // Start timer for custom rgb timeout
+    #if (RGB_DISABLE_TIMEOUT == 0) && (RGB_CUSTOM_TIMEOUT_DELAY > 0)
+        #if (defined (RGB_MATRIX_ENABLE)) || (defined (RGBLIGHT_ENABLE))
+            rgb_anykey_timeout = timer_read32();
+        #endif
+    #endif
+
+    // Fade in RGB when first plugging in kb or on resume from sleep
+    #if (defined (RGB_MATRIX_ENABLE)) || (defined (RGBLIGHT_ENABLE))
+        rgb_matrix_boot_anim(1);
+    #endif
+    keyboard_post_init_keymap();
+}
+
+void suspend_wakeup_init_rgb(void) {
+    // Fade in RGB when first plugging in kb or on resume from sleep
+    #if (defined (RGB_MATRIX_ENABLE)) || (defined (RGBLIGHT_ENABLE))
+        rgb_matrix_boot_anim(1);
+    #endif
+    suspend_wakeup_init_keymap();
+}
+//=======RGB init/suspend functions End=======//
