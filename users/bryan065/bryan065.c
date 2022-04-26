@@ -36,7 +36,7 @@ void                       suspend_wakeup_init_user(void) {
     suspend_wakeup_init_rgb();
 
     // Clear any stuck keys on init wakeup
-    clear_keyboard();
+    tap_code(KC_ESC);
 }
 
 // Userspace and keymap pre init
