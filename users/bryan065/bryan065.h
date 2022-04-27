@@ -50,13 +50,6 @@ uint8_t SPAM;
 // 8 - F
 // 9 - G
 
-enum userspace_layers {
-  _BASE = 0, 	// Base Layer
-  _FUNC,     	// Function Layer
-  _RGB,     	// RGB control Layer
-  _SYS          // System control layer (reset, sleep, etc)
-};
-
 enum userspace_custom_keycodes {
     RGB_DEFAULT = SAFE_RANGE,   // Reset to default RGB mode
     VRSN,                       // Print QMK Version
@@ -79,6 +72,12 @@ enum userspace_custom_keycodes {
 
 void keyboard_pre_init_keymap(void);
 void keyboard_post_init_keymap(void);
+void keyboard_post_init_rgb(void);
+void suspend_wakeup_init_rgb(void);
 void matrix_scan_keymap(void);
+
 bool process_record_keymap(uint16_t keycode, keyrecord_t *record);
 bool process_record_rgb(uint16_t keycode, keyrecord_t *record);
+
+void rgb_matrix_indicator_rgb(void);
+void rgb_matrix_indicator_advanced_rgb(uint8_t led_min, uint8_t led_max);
