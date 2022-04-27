@@ -16,5 +16,5 @@ KEY_OVERRIDE_ENABLE = no
 USER_NAME := bryan065
 
 SRC += \
-	rgb2.c\
+	rgb.c\
 	bryan065.c
