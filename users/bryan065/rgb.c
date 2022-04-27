@@ -352,6 +352,14 @@ bool process_record_rgb(uint16_t keycode, keyrecord_t *record) {
             #endif
             #endif
             return false;
+        case MON_OFF:
+            SEND_STRING(SS_TAP(X_LGUI) SS_DELAY(500) "mon" SS_DELAY(500) SS_TAP(X_ENT));
+
+            // Run a shutdown animation before kb goes to sleep
+            #if (defined (RGB_MATRIX_ENABLE)) || (defined (RGBLIGHT_ENABLE))
+                rgb_matrix_boot_anim(2);
+            #endif
+            return false;
         }
     }
     return process_record_keymap(keycode, record);
@@ -414,6 +422,11 @@ void keyboard_post_init_rgb(void) {
         #if (defined (RGB_MATRIX_ENABLE)) || (defined (RGBLIGHT_ENABLE))
             rgb_anykey_timeout = timer_read32();
         #endif
+    #endif
+    
+    // Fade in RGB when first plugging in kb or on resume from sleep
+    #if (defined (RGB_MATRIX_ENABLE)) || (defined (RGBLIGHT_ENABLE))
+        rgb_matrix_boot_anim(1);
     #endif
 }
 
