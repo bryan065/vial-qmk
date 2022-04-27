@@ -36,7 +36,12 @@ HSV          rgb_original_hsv;
 uint16_t     boot_timer;
 int8_t       boot_status = 0;
 
-static bool  RGB_MOD_FLAG;
+bool  RGB_MOD_FLAG;
+
+#ifdef LIGHTBAR
+  static bool  LIGHTBAR_FLAG;
+#endif
 
 HSV SPLASH_math2(HSV, int16_t, int16_t, uint8_t, uint16_t);
 void rgb_matrix_boot_anim(uint8_t );
+bool process_record_keymap(uint16_t keycode, keyrecord_t *record);

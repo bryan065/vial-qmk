@@ -161,3 +161,18 @@ void suspend_wakeup_init_user(void) {
     #endif
 }
 //=======Keyboard init/suspend functions End=======//
+
+
+//=================Keycode Functions ================//
+bool process_record_rgb(uint16_t keycode, keyrecord_t *record) {
+// Custom keycode, on key release
+    if (!record->event.pressed) {
+        switch(keycode) {
+        case RGB_MODE_FORWARD ... RGB_SPD:  // Add RGB_MOD_FLAG = true to all RGB modification keys.
+            RGB_MOD_FLAG = true;            //   This is to let the per key indicator know to stop if the RGB settings are modified so
+            return true;                   //   the user can see the changes again without the layer indicator in the way
+        }
+    }
+    return process_record_keymap(keycode, record);
+}
+//==============Keycode Functions End=============//
