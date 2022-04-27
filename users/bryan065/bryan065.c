@@ -23,6 +23,13 @@
 // customization of the keymap.  Use _keymap instead of _user
 // functions in the keymaps
 
+// Userspace and keymap suspend init wakeup
+__attribute__((weak)) void suspend_wakeup_init_keymap(void) {}
+__attribute__((weak)) void suspend_wakeup_init_rgb(void) { suspend_wakeup_init_keymap(); }
+void                       suspend_wakeup_init_user(void) {
+    suspend_wakeup_init_rgb();
+}
+
 // Userspace and keymap pre init
 __attribute__((weak)) void keyboard_pre_init_keymap(void) {}
 void                       keyboard_pre_init_user(void) {
@@ -31,8 +38,9 @@ void                       keyboard_pre_init_user(void) {
 
 // Userspace and keymap post init
 __attribute__((weak)) void keyboard_post_init_keymap(void) {}
+__attribute__((weak)) void keyboard_post_init_rgb(void) { keyboard_post_init_keymap(); }
 void                       keyboard_post_init_user(void) {
-    keyboard_post_init_keymap();
+    keyboard_post_init_rgb();
     
     #if defined(PREDEFINED_TAP_DANCE) && defined(VIAL_ENABLE)
       // Sequence of on tap, on hold, double tap, tap+hold
@@ -55,6 +63,22 @@ void                       keyboard_post_init_user(void) {
     dynamic_keymap_set_keycode(TD_SYS_LAYER, 3, 5, KC_G_SPAM);
   #endif
 }
+
+// Userspace and keymap RGB matrix indicator user
+__attribute__((weak)) void rgb_matrix_indicators_keymap(void) {}
+__attribute__((weak)) void rgb_matrix_indicators_rgb(void) { rgb_matrix_indicators_keymap(); }
+void rgb_matrix_indicators_user (void) {
+    rgb_matrix_indicators_rgb();
+}
+
+// Userspace and keymap RGB matrix indicator advanced user
+__attribute__((weak)) void rgb_matrix_indicators_advanced_keymap(uint8_t led_min, uint8_t led_max) {}
+__attribute__((weak)) void rgb_matrix_indicators_advanced_rgb(uint8_t led_min, uint8_t led_max) { rgb_matrix_indicators_advanced_keymap(led_min, led_max); }
+void                       rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
+    rgb_matrix_indicators_advanced_rgb(led_min, led_max);
+    
+}
+
 
 // Userspace and keymap custom keycodes
 __attribute__ ((weak)) bool process_record_keymap(uint16_t keycode, keyrecord_t *record) { return true; }
