@@ -1,0 +1,23 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later */
+
+#pragma once
+
+#define VIAL_KEYBOARD_UID {0xDC, 0x11, 0xA8, 0xCD, 0x29, 0xD7, 0x70, 0xBB}
+
+/* Vial unlock keycombo: ESC + Return */
+#define VIAL_UNLOCK_COMBO_ROWS { 0, 3 }
+#define VIAL_UNLOCK_COMBO_COLS { 0, 12}
+
+//RGB Matrix Effects
+#define ENABLE_RGB_MATRIX_CYCLE_LEFT_RIGHT
+#define ENABLE_RGB_MATRIX_RAINBOW_MOVING_CHEVRON
+#define ENABLE_RGB_MATRIX_CYCLE_PINWHEEL
+#define ENABLE_RGB_MATRIX_CYCLE_UP_DOWN
+
+// Vial config
+#define DYNAMIC_KEYMAP_LAYER_COUNT 3
+#define VIAL_TAP_DANCE_ENTRIES 0
+
+#undef LOCKING_SUPPORT_ENABLE
+#undef LOCKING_RESYNC_ENABLE
+#define NO_ACTION_ONESHOT

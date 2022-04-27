@@ -1,0 +1,47 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later */
+
+#pragma once
+
+// User settings
+#define USB_POLLING_INTERVAL_MS 2
+#define QMK_KEYS_PER_SCAN 8
+#define DEBOUNCE 2
+
+#undef PRODUCT
+#define PRODUCT DookieBoard980v2
+#define FORCE_NKRO
+
+#define RGB_DISABLE_TIMEOUT 900000 // 15 minutes
+
+#define LOST_ARK
+
+//RGB Matrix Effects
+#define ENABLE_RGB_MATRIX_CYCLE_LEFT_RIGHT
+#define ENABLE_RGB_MATRIX_RAINBOW_MOVING_CHEVRON
+#define ENABLE_RGB_MATRIX_CYCLE_PINWHEEL
+#define ENABLE_RGB_MATRIX_CYCLE_UP_DOWN
+
+#define ENABLE_RGB_MATRIX_SOLID_REACTIVE_SIMPLE
+#define ENABLE_RGB_MATRIX_SOLID_REACTIVE
+#define ENABLE_RGB_MATRIX_SOLID_MULTISPLASH
+
+#define RGB_MATRIX_KEYPRESSES
+
+#define RGB_MATRIX_STARTUP_SPD 64
+
+// Vial config
+#define DYNAMIC_KEYMAP_LAYER_COUNT 3
+#define VIAL_TAP_DANCE_ENTRIES 1
+#define PREDEFINED_TAP_DANCE
+#define TD_SYS_LAYER 2
+
+#define VIAL_KEYBOARD_UID {0xDC, 0x11, 0xA8, 0xCD, 0x29, 0xD7, 0x70, 0xBB}
+
+/* Vial unlock keycombo: ESC + Return */
+#define VIAL_UNLOCK_COMBO_ROWS { 0, 3 }
+#define VIAL_UNLOCK_COMBO_COLS { 0, 12}
+
+// Vial firmware size tweaks
+#undef LOCKING_SUPPORT_ENABLE
+#undef LOCKING_RESYNC_ENABLE
+#define NO_ACTION_ONESHOT
