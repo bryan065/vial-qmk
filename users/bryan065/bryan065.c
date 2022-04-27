@@ -43,25 +43,58 @@ void                       keyboard_post_init_user(void) {
     keyboard_post_init_rgb();
     
     #if defined(PREDEFINED_TAP_DANCE) && defined(VIAL_ENABLE)
-      // Sequence of on tap, on hold, double tap, tap+hold
-      vial_tap_dance_entry_t td = { KC_CAPSOFF, KC_NO, KC_CAPS, MO(TD_SYS_LAYER), TAPPING_TERM };
-      dynamic_keymap_set_tap_dance(0, &td);
-      
-      // Set Capslock key to predefined TD(0)
-      dynamic_keymap_set_keycode(0, 3, 0, TD(0));
-  #endif
-  
-  #ifdef LOST_ARK
-    dynamic_keymap_set_keycode(TD_SYS_LAYER, 2, 1, KC_Q_SPAM);
-    dynamic_keymap_set_keycode(TD_SYS_LAYER, 2, 2, KC_W_SPAM);
-    dynamic_keymap_set_keycode(TD_SYS_LAYER, 2, 3, KC_E_SPAM);
-    dynamic_keymap_set_keycode(TD_SYS_LAYER, 2, 4, KC_R_SPAM);
-    dynamic_keymap_set_keycode(TD_SYS_LAYER, 3, 1, KC_A_SPAM);
-    dynamic_keymap_set_keycode(TD_SYS_LAYER, 3, 2, KC_S_SPAM);
-    dynamic_keymap_set_keycode(TD_SYS_LAYER, 3, 3, KC_D_SPAM);
-    dynamic_keymap_set_keycode(TD_SYS_LAYER, 3, 4, KC_F_SPAM);
-    dynamic_keymap_set_keycode(TD_SYS_LAYER, 3, 5, KC_G_SPAM);
-  #endif
+    // Sequence of on tap, on hold, double tap, tap+hold
+    vial_tap_dance_entry_t td = { KC_CAPSOFF, KC_NO, KC_CAPS, MO(TD_SYS_LAYER), TAPPING_TERM };
+    dynamic_keymap_set_tap_dance(0, &td);
+    #endif
+    
+    // Search for specific keys and replace
+    for (uint8_t layer = 0; layer <= 3; ++layer) {
+      for (uint8_t row = 0; row < MATRIX_ROWS; ++row) {
+        for (uint8_t col = 0; col < MATRIX_COLS; ++col) {
+          uint16_t keycheck = keymap_key_to_keycode(layer, (keypos_t){col,row});
+          
+          switch(keycheck) {
+              #if defined(PREDEFINED_TAP_DANCE) && defined(VIAL_ENABLE)
+              case KC_CAPS:
+                // Set Capslock key to predefined TD(0)
+                dynamic_keymap_set_keycode(layer, row, col, TD(0));
+                break;
+              #endif
+              
+              #ifdef LOST_ARK
+              case KC_Q:
+                dynamic_keymap_set_keycode(TD_SYS_LAYER, row, col, KC_Q_SPAM);
+                break;
+              case KC_W:
+                dynamic_keymap_set_keycode(TD_SYS_LAYER, row, col, KC_W_SPAM);
+                break;
+              case KC_E:
+                dynamic_keymap_set_keycode(TD_SYS_LAYER, row, col, KC_E_SPAM);
+                break;
+              case KC_R:
+                dynamic_keymap_set_keycode(TD_SYS_LAYER, row, col, KC_R_SPAM);
+                break;
+              case KC_A:
+                dynamic_keymap_set_keycode(TD_SYS_LAYER, row, col, KC_A_SPAM);
+                break;
+              case KC_S:
+                dynamic_keymap_set_keycode(TD_SYS_LAYER, row, col, KC_S_SPAM);
+                break;
+              case KC_D:
+                dynamic_keymap_set_keycode(TD_SYS_LAYER, row, col, KC_D_SPAM);
+                break;
+              case KC_F:
+                dynamic_keymap_set_keycode(TD_SYS_LAYER, row, col, KC_F_SPAM);
+                break;
+              case KC_G:
+                dynamic_keymap_set_keycode(TD_SYS_LAYER, row, col, KC_G_SPAM);
+                break;
+              #endif
+          }
+        }
+      }
+    }
 }
 
 // Userspace and keymap RGB matrix indicator user
