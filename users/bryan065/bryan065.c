@@ -271,16 +271,16 @@ void                       matrix_scan_user(void) {
     bool encoder_update_user(uint8_t index, bool clockwise) {
         if (index == 0) {
             if (clockwise) {
-                #ifdef CYBER77  // Cyber77 specific encoder setup
+                #ifdef CYBER77  // Cyber77 specific encoder setup: row 4, col 8 > unused matrix positions
                   tap_code(dynamic_keymap_get_keycode(biton32(layer_state),4,8));
                 #else
-                  tap_code(KC_NO);
+                  tap_code(KC_VOLU);
                 #endif
             } else {
                 #ifdef CYBER77  // Cyber77 specific encoder setup
                   tap_code(dynamic_keymap_get_keycode(biton32(layer_state),4,6));
                 #else
-                  tap_code(KC_NO);
+                  tap_code(KC_VOLD);
                 #endif
             }
         }
