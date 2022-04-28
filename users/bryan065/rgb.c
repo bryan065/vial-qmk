@@ -84,7 +84,8 @@ layer_state_t layer_state_set_user(layer_state_t state) {
 //==========Per Layer RGB Matrix indicators========//
 void rgb_matrix_indicators_advanced_rgb(uint8_t led_min, uint8_t led_max) {
     rgb_matrix_indicators_advanced_keymap(led_min, led_max);
-    
+
+    // Boot animation
     void rgb_matrix_boot_anim_runner(uint8_t originx, uint8_t originy) {
         for (uint8_t i = led_min; i < led_max; i++) {
                     HSV hsv = rgb_matrix_config.hsv;
@@ -135,44 +136,48 @@ void rgb_matrix_indicators_advanced_rgb(uint8_t led_min, uint8_t led_max) {
     if (get_highest_layer(layer_state) > 0 && !RGB_MOD_FLAG) {
         uint8_t layer = get_highest_layer(layer_state);
 
-        // Lightbar layer indicator
+        // Underglow layer indicator
         HSV hsv = rgb_matrix_config.hsv;
         hsv.s   = 255;  // Ensure RGB colors are full saturation regardless of user's setting
 
-        // Layer color settings
-        //  LIGHTBAR_FLAG
-        //
-        //  TRUE    = custom indicator color
-        //  FALSE   = no custom indicator color
+        /* Show layer indicators on underglow flagged LED's. If set to false, the user's RGB animation/mode will show through.
+         *  RGB_UNDERGLOW_FLAG
+         *
+         *  TRUE    = custom indicator color
+         *  FALSE   = transparent
+         */
         switch (layer) {
-            case 1:
-                LIGHTBAR_FLAG = false;
-                if (LIGHTBAR_FLAG) { hsv.h = 0;} // Red but disabled so animation shows through
+            case 0: // Layer 0 - BASE layer
+                // Nothing will work here, keep empty
                 break;
-            case 2:
-                LIGHTBAR_FLAG = true;
-                if (LIGHTBAR_FLAG) { hsv.h = 50;} // Yellow
+            case 1: // Layer 1
+                RGB_UNDERGLOW_FLAG = false;
+                hsv.h = 0;  // Red but disabled so animation shows through
                 break;
-            case 3:
-                LIGHTBAR_FLAG = true;
-                if (LIGHTBAR_FLAG) { hsv.h = 0;} // Red
+            case 2: // Layer 2
+                RGB_UNDERGLOW_FLAG = true;
+                hsv.h = 50; // Yellow
+                break;
+            case 3: // Layer 3
+                RGB_UNDERGLOW_FLAG = true;
+                hsv.h = 0;  // Red
                 break;
             default:
-                LIGHTBAR_FLAG = false;
+                RGB_UNDERGLOW_FLAG = false;
                 break;
         }
 
         //apply the colors to the layers, if configured. Otherwise, the user's RGB mode will show through
         RGB rgb = hsv_to_rgb(hsv);
 
-        if (LIGHTBAR_FLAG) {
+        if (RGB_UNDERGLOW_FLAG) {
             for (uint8_t i = led_min; i <= led_max; i++) {
                 if (HAS_FLAGS(g_led_config.flags[i], 0x02)) { // 0x02 == LED_FLAG_UNDERGLOW
                     RGB_MATRIX_INDICATOR_SET_COLOR(i, rgb.r, rgb.g, rgb.b);
                 }
             }
         }
-        // End of lightbar layer indicator
+        // End of underglow layer indicator
 
         // Per configured key indicator
         for (uint8_t row = 0; row < MATRIX_ROWS; ++row) {
@@ -186,7 +191,24 @@ void rgb_matrix_indicators_advanced_rgb(uint8_t led_min, uint8_t led_max) {
                     HSV hsv = rgb_matrix_config.hsv;
                     hsv.s   = 255;  // Ensure RGB colors are full saturation regardless of user's setting
 
-                    // If key is configured, light it up
+                    /* If key is configured aka KC_TRNS, set keys to a specific color:
+                     *   PERKEY_HUE = color of configured keys
+                     *   PERKEY_SAT = saturation of configured keys
+                     *
+                     * Per key override color:
+                     *   Will override colors on specific keys, aka RESET
+                     *
+                     * Per key overide color with toggle indicator
+                     *   Will override colors on specific keys and toggle to a different color
+                     *   aka NK_TOGG showing nkro status
+                     *   or  GUI_TOG showing gui status
+                     *
+                     *  hsv.h = hue
+                     *  hsv.s = saturation
+                     *  hsv.v = DO NOT CHANGE
+                     */
+                    uint8_t PERKEY_HUE = 0;
+                    uint8_t PERKEY_SAT = 0;
                     if (keycheck > KC_TRNS) {
 
                         // Per key overrides
@@ -198,29 +220,98 @@ void rgb_matrix_indicators_advanced_rgb(uint8_t led_min, uint8_t led_max) {
                                 hsv.h = 0;  // RED
                                 break;
                             case EEP_RST_R:
-                                hsv.h = 50; // YELLOW
+                                hsv.h = 0;  // RED
                                 break;
-                            default:
-                                // Per key override with toggle indicator
-                                if (keycheck == NK_TOGG && keymap_config.nkro == 1) {
+
+                            /* Per key overrides with toggle colors
+                             *
+                             *   Set the hue in the first `if statement`  for the color when toggled on
+                             *   Set the hue in the second `if statement` for the color when toggled off
+                             *      If you don't want to set a second color when toggled off, replace `hsv.h` with `goto perkey;`
+                             *
+                             *  hsv.h = hue
+                             *  hsv.s = saturation
+                             *  hsv.v = DO NOT CHANGE
+                             */
+                            case NK_TOGG:
+                                if (keymap_config.nkro == 1) {
                                     hsv.h = 85; // GREEN if nkro is enabled
-                                } else if (keycheck == GUI_TOG && keymap_config.no_gui == 1) {
+                                } else {
+                                    //hsv.h = 0 ; // RED if nkro is enabled. Comment out to keep same color as the rest of the perkey
+                                    goto perkey;
+                                }
+                                break;
+                            case GUI_TOG:
+                                if (keymap_config.no_gui == 1) {
                                     hsv.h = 0;  // RED if GUI is disabled
                                 }
                                 else {
-                                    hsv.s = 0;  // Set per key lights to white and respect the user's hsv.v value
+                                    //hsv.h = 85; // GREEN if GUI is enabled. Comment out to keep same color as the rest of the perkey
+                                    goto perkey;
                                 }
+                                break;
+
+                            default:
+                            perkey:
+                                hsv.h = PERKEY_HUE;
+                                hsv.s = PERKEY_SAT;
+                                break;
                         }
 
                         // Make the key lights a bit brighter
                         if (hsv.v < (RGB_MATRIX_MAXIMUM_BRIGHTNESS - 30)) { hsv.v += 30; }
                         else { hsv.v = RGB_MATRIX_MAXIMUM_BRIGHTNESS; }
 
+                        // Apply color to configured keys
                         rgb = hsv_to_rgb(hsv);
                         RGB_MATRIX_INDICATOR_SET_COLOR(index, rgb.r, rgb.g, rgb.b);
                     }
-                    else {  // If key is not configured, light it up differently or not at all.
-                        RGB_MATRIX_INDICATOR_SET_COLOR(index, 0, 0, 0); //If this line is commented out, the original animation will show through. However, freezes my keyboard after 2s.
+                    else {
+                        /* If key is not configured aka KC_TRNS, allow RGB_MATRIX animation to show through or set per layer indicator for RGB_MATRIX
+                         *  RGB_MATRIX_FLAG
+                         *
+                         *  TRUE    = custom indicator color
+                         *  FALSE   = transparent
+                         *
+                         *  hsv.h   = hue
+                         *  hsv.s   = saturation
+                         *  hsv.v   = brightness (set to 0 to disable layer indicator AND user RGB color)
+                         */
+
+                        #ifdef DISABLE_LAYER_INDICATOR_MATRIX
+                            // Hide RGB_MATRIX animations
+                            RGB_MATRIX_FLAG = true;
+                            hsv.v = 0;
+                        #else
+                            // Per layer indicator ONLY on the RGB_MATRIX (not underglow)
+                            switch (layer) {
+                            case 0: // Layer 0 - BASE layer
+                                // Nothing will work here, keep empty
+                                break;
+                            case 1: // Layer 1
+                                RGB_MATRIX_FLAG = false;
+                                hsv.h = 45;
+                                //hsv.v = 0;
+                                break;
+                            case 2: // Layer 2
+                                RGB_MATRIX_FLAG = true;
+                                hsv.h = 90;
+                                hsv.v = 0;
+                                break;
+                            case 3: // Layer 3
+                                RGB_MATRIX_FLAG = true;
+                                hsv.h = 120;
+                                hsv.v = 0;
+                                break;
+                            }
+                        #endif
+
+                        // Apply colors to the non-configured keys aka layer indicator. Otherwise, the user's RGB mode will show through
+                        RGB rgb = hsv_to_rgb(hsv);
+
+                        if (RGB_MATRIX_FLAG) {
+                            RGB_MATRIX_INDICATOR_SET_COLOR(index, rgb.r, rgb.g, rgb.b);
+                        }
                     }
                 } // End of comparison code
             }
@@ -332,8 +423,8 @@ bool process_record_rgb(uint16_t keycode, keyrecord_t *record) {
             }
         #endif
     #endif // End of custom timeout code - FADE IN
-    
-    
+
+
     // Custom keycode, on key release
     if (!record->event.pressed) {
         switch(keycode) {
@@ -367,14 +458,14 @@ bool process_record_rgb(uint16_t keycode, keyrecord_t *record) {
 //==========RGB init/suspend functions========//
 void keyboard_post_init_rgb(void) {
     keyboard_post_init_keymap();
-    
+
     // Start timer for custom rgb timeout
     #if (RGB_DISABLE_TIMEOUT == 0) && (RGB_CUSTOM_TIMEOUT_DELAY > 0)
         #if (defined (RGB_MATRIX_ENABLE)) || (defined (RGBLIGHT_ENABLE))
             rgb_anykey_timeout = timer_read32();
         #endif
     #endif
-    
+
     // Fade in RGB when first plugging in kb or on resume from sleep
     #if (defined (RGB_MATRIX_ENABLE)) || (defined (RGBLIGHT_ENABLE))
         rgb_matrix_boot_anim(1);
@@ -383,7 +474,7 @@ void keyboard_post_init_rgb(void) {
 
 void suspend_wakeup_init_rgb(void) {
     suspend_wakeup_init_keymap();
-    
+
     // Fade in RGB when first plugging in kb or on resume from sleep
     #if (defined (RGB_MATRIX_ENABLE)) || (defined (RGBLIGHT_ENABLE))
         rgb_matrix_boot_anim(1);
