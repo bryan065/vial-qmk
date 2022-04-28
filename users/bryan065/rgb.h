@@ -72,7 +72,8 @@ int8_t       fade_status = 0;
 int8_t       boot_status = 0;
 
 bool  RGB_MOD_FLAG;
-bool  LIGHTBAR_FLAG;
+bool  RGB_UNDERGLOW_FLAG;
+bool  RGB_MATRIX_FLAG;
 
 HSV SPLASH_math2(HSV, int16_t, int16_t, uint8_t, uint16_t);
 void rgb_matrix_boot_anim(uint8_t );
