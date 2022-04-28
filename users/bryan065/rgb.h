@@ -50,12 +50,6 @@
 #   define FADE_TIME 4
 #endif
 
-#if VENDOR_ID == 0xA103
-  #if PRODUCT == Cyber77
-    #define CYBER77
-  #endif
-#endif
-
 HSV          rgb_original_hsv;
 uint16_t     fade_timer;
 uint16_t     boot_timer;
