@@ -26,6 +26,10 @@
 #include "bryan065.h"
 #include <lib/lib8tion/lib8tion.h>
 
+#ifdef CYBER77
+  #include "cyber77.h"
+#endif
+
 // Define custom values if not defined in config.h
 #if STARTUP_ANIM_TIME < 0
 #   error STARTUP_ANIM_TIME must be greater than 0
@@ -48,12 +52,6 @@
 #   error FADE_TIME must be greater than 0
 #elif !defined (FADE_TIME)
 #   define FADE_TIME 4
-#endif
-
-#if VENDOR_ID == 0xA103
-  #if PRODUCT == Cyber77
-    #define CYBER77
-  #endif
 #endif
 
 HSV          rgb_original_hsv;
