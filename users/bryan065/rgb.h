@@ -26,10 +26,6 @@
 #include "bryan065.h"
 #include <lib/lib8tion/lib8tion.h>
 
-#ifdef CYBER77
-  #include "cyber77.h"
-#endif
-
 // Define custom values if not defined in config.h
 #if STARTUP_ANIM_TIME < 0
 #   error STARTUP_ANIM_TIME must be greater than 0
