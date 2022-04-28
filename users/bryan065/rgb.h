@@ -33,9 +33,15 @@
 #   define STARTUP_ANIM_TIME 2200
 #endif
 
-// Custom RGB timeout timer
+// Ensure the built in RGB_DISABLE_TIMEOUT is disabled if you enable RGB_CUSTOM_TIMEOUT_DELAY
+#if (RGB_CUSTOM_TIMEOUT_DELAY > 0)
+  #undef RGB_DISABLE_TIMEOUT
+  #define RGB_DISABLE_TIMEOUT 0
+#endif
+
+// RGB_CUSTOM_TIMEOUT_DELAY setup
 #if RGB_DISABLE_TIMEOUT == 0
-  #if RGB_CUSTOM_TIMEOUT_DELAY < 30000
+  #if (RGB_CUSTOM_TIMEOUT_DELAY < 30000) && (RGB_CUSTOM_TIMEOUT_DELAY > 0)
     #undef RGB_CUSTOM_TIMEOUT_DELAY
     #define RGB_CUSTOM_TIMEOUT_DELAY 30000
   #endif
@@ -44,10 +50,19 @@
     bool         timeout;
 #endif
 
+// Fade time setup for RGB_CUSTOM_TIMEOUT_DELAY
 #if FADE_TIME < 0
 #   error FADE_TIME must be greater than 0
 #elif !defined (FADE_TIME)
 #   define FADE_TIME 4
+#endif
+
+// Boot animation start position
+#ifndef BOOT_ANIM_X
+  #define BOOT_ANIM_X 30
+#endif
+#ifndef BOOT_ANIM_Y
+  #define BOOT_ANIM_Y 0
 #endif
 
 HSV          rgb_original_hsv;

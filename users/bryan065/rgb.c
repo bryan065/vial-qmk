@@ -113,7 +113,7 @@ void rgb_matrix_indicators_advanced_rgb(uint8_t led_min, uint8_t led_max) {
             rgb_matrix_fade_in();                                                                               // Fade in after boot animation is complete
             boot_status = 0;
         } else {                                                                                                // Otherwise, run boot animation
-            rgb_matrix_boot_anim_runner(30,0);
+            rgb_matrix_boot_anim_runner(BOOT_ANIM_X,BOOT_ANIM_Y);
         }
         return;
     case 2:
@@ -300,7 +300,7 @@ void rgb_matrix_indicators_rgb(void) {
     } // End of fade animation code
 
     // Custom RGB timeout code that includes fades - FADE OUT
-    #if RGB_DISABLE_TIMEOUT == 0
+    #if (RGB_DISABLE_TIMEOUT == 0) && (RGB_CUSTOM_TIMEOUT_DELAY > 0)
         if (rgb_matrix_config.enable) {
             #if (defined (RGB_MATRIX_ENABLE)) || (defined (RGBLIGHT_ENABLE))
                 if ((timer_elapsed32(rgb_anykey_timeout) > UINT32_MAX)) {
@@ -319,7 +319,7 @@ void rgb_matrix_indicators_rgb(void) {
 //=================Keycode Functions ================//
 bool process_record_rgb(uint16_t keycode, keyrecord_t *record) {
     // Custom timeout code to add fades - FADE IN
-    #if RGB_DISABLE_TIMEOUT == 0
+    #if (RGB_DISABLE_TIMEOUT == 0) && (RGB_CUSTOM_TIMEOUT_DELAY > 0)
         #if (defined (RGB_MATRIX_ENABLE)) || (defined (RGBLIGHT_ENABLE))
             if (record->event.pressed) {
                 rgb_anykey_timeout = timer_read32();    // Reset timeout timer on any key press
@@ -341,7 +341,6 @@ bool process_record_rgb(uint16_t keycode, keyrecord_t *record) {
             RGB_MOD_FLAG = true;            //   This is to let the per key indicator know to stop if the RGB settings are modified so
             return true;                   //   the user can see the changes again without the layer indicator in the way
         case RGB_TOG:   // Override original RGB_TOG function and add fades
-            #if RGB_DISABLE_TIMEOUT == 0
             #if (defined (RGB_MATRIX_ENABLE)) || (defined (RGBLIGHT_ENABLE))
                 if (rgb_matrix_is_enabled()) {
                     rgb_matrix_fade_out();
@@ -349,7 +348,6 @@ bool process_record_rgb(uint16_t keycode, keyrecord_t *record) {
                     rgb_matrix_enable();
                     rgb_matrix_fade_in();
                 }
-            #endif
             #endif
             return false;
         case MON_OFF:
@@ -371,7 +369,7 @@ void keyboard_post_init_rgb(void) {
     keyboard_post_init_keymap();
     
     // Start timer for custom rgb timeout
-    #if (RGB_DISABLE_TIMEOUT == 0)
+    #if (RGB_DISABLE_TIMEOUT == 0) && (RGB_CUSTOM_TIMEOUT_DELAY > 0)
         #if (defined (RGB_MATRIX_ENABLE)) || (defined (RGBLIGHT_ENABLE))
             rgb_anykey_timeout = timer_read32();
         #endif
