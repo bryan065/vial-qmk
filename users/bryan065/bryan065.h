@@ -24,6 +24,12 @@
 #include "quantum.h"
 #include "version.h"
 
+#if VENDOR_ID == 0xA103
+  #if PRODUCT == Cyber77
+    #define CYBER77
+  #endif
+#endif
+
 #ifndef TD_SYS_LAYER
   #define TD_SYS_LAYER 3
 #elif TD_SYS_LAYER < 1
