@@ -14,6 +14,7 @@
 #define FORCE_NKRO
 #define LAYER_STATE_8BIT
 
+// Custom defines from /user/bryan065
 #define RGB_CUSTOM_TIMEOUT_DELAY 900000     // Timout delay in ms. Set to 15 minutes
 #define PREDEFINED_TAP_DANCE
 #define LOST_ARK
