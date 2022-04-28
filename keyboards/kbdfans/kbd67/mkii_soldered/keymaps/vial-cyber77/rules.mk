@@ -2,30 +2,26 @@ DEBOUNCE_TYPE = asym_eager_defer_pk
 TAP_DANCE_ENABLE = yes
 RGB_MATRIX_ENABLE = yes
 RGB_MATRIX_DRIVER = WS2812
-RGB_MATRIX_CUSTOM_USER = yes
-
 ENCODER_ENABLE = yes
-
-VIA_ENABLE = yes
-VIAL_ENABLE = yes
 LTO_ENABLE = yes
-VIALRGB_ENABLE = yes
 
 # firmware size reduction
 SPACE_CADET_ENABLE = no
-GRAVE_ESC_ENABLE = no 
+GRAVE_ESC_ENABLE = no
 QMK_SETTINGS = no
 COMMAND_ENABLE = no
 MOUSEKEY_ENABLE = no
 BACKLIGHT_ENABLE = no
 
-#via
+# via
+VIA_ENABLE = yes
+VIAL_ENABLE = yes
+VIALRGB_ENABLE = yes
 COMBO_ENABLE = no
 KEY_OVERRIDE_ENABLE = no
 
-#user
+# user
 USER_NAME := bryan065
-
 SRC += \
 	rgb.c\
 	bryan065.c
