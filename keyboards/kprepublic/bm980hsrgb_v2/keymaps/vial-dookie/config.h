@@ -14,6 +14,8 @@
 
 #define RGB_CUSTOM_TIMEOUT_DELAY 900000     // Timout delay in ms. Set to 15 minutes
 #define LOST_ARK
+#define BOOT_ANIM_X 112
+#define BOOT_ANIM_Y 0
 
 //RGB Matrix Effects
 #define ENABLE_RGB_MATRIX_CYCLE_LEFT_RIGHT
