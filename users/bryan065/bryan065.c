@@ -17,6 +17,12 @@
 
 #include QMK_KEYBOARD_H
 #include "bryan065.h"
+#include "rgb.h"
+#include "version.h"
+
+#ifdef __AVR__
+#include <avr/wdt.h>
+#endif
 
 // Add reconfigurable functions here, for keymap customization
 // This allows for a global, userspace functions, and continued
@@ -41,19 +47,19 @@ __attribute__((weak)) void keyboard_post_init_keymap(void) {}
 __attribute__((weak)) void keyboard_post_init_rgb(void) { keyboard_post_init_keymap(); }
 void                       keyboard_post_init_user(void) {
     keyboard_post_init_rgb();
-    
+
     #if defined(PREDEFINED_TAP_DANCE) && defined(VIAL_ENABLE)
     // Sequence of on tap, on hold, double tap, tap+hold
     vial_tap_dance_entry_t td = { KC_CAPSOFF, KC_NO, KC_CAPS, MO(TD_SYS_LAYER), TAPPING_TERM };
     dynamic_keymap_set_tap_dance(0, &td);
     #endif
-    
+
     // Search for specific keys and replace
     for (uint8_t layer = 0; layer <= 3; ++layer) {
       for (uint8_t row = 0; row < MATRIX_ROWS; ++row) {
         for (uint8_t col = 0; col < MATRIX_COLS; ++col) {
           uint16_t keycheck = keymap_key_to_keycode(layer, (keypos_t){col,row});
-          
+
           switch(keycheck) {
               #if defined(PREDEFINED_TAP_DANCE) && defined(VIAL_ENABLE)
               case KC_CAPS:
@@ -61,7 +67,7 @@ void                       keyboard_post_init_user(void) {
                 dynamic_keymap_set_keycode(layer, row, col, TD(0));
                 break;
               #endif
-              
+
               #ifdef LOST_ARK
               case KC_Q:
                 dynamic_keymap_set_keycode(TD_SYS_LAYER, row, col, KC_Q_SPAM);
@@ -109,7 +115,7 @@ __attribute__((weak)) void rgb_matrix_indicators_advanced_keymap(uint8_t led_min
 __attribute__((weak)) void rgb_matrix_indicators_advanced_rgb(uint8_t led_min, uint8_t led_max) { rgb_matrix_indicators_advanced_keymap(led_min, led_max); }
 void                       rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     rgb_matrix_indicators_advanced_rgb(led_min, led_max);
-    
+
 }
 
 
@@ -153,7 +159,7 @@ bool                        process_record_user(uint16_t keycode, keyrecord_t *r
           rgb_matrix_mode(RGB_MATRIX_SOLID_COLOR);
         #endif
         return false;
-      
+
       #ifdef LOST_ARK
       case KC_Q_SPAM: // Spam keys for idle farming in lost ark (Skill "Q" and "G" farm)
           if (SPAM != 1) { SPAM = 1;}

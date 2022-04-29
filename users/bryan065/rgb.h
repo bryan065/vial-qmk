@@ -23,8 +23,29 @@
 #pragma once
 
 #include "quantum.h"
-#include "bryan065.h"
-#include <lib/lib8tion/lib8tion.h>
+
+// Per layer RGB options
+struct RGB_MATRIX_INDICATOR {
+    bool flag;
+    uint8_t hsv_h;
+    uint8_t hsv_s;
+    uint8_t hsv_v;
+};
+
+extern struct RGB_MATRIX_INDICATOR indicator_matrix[8];
+extern struct RGB_MATRIX_INDICATOR indicator_underglow[8];
+
+#if (PERKEY_HUE < 0) || (PERKEY_HUE > 255)
+    #error "PERKEY_HUE needs to be within 0-255"
+#elif !defined (PERKEY_HUE)
+    #define PERKEY_HUE 0
+#endif
+
+#if (PERKEY_SAT < 0) || (PERKEY_SAT > 255)
+    #error "PERKEY_SAT needs to be within 0-255"
+#elif !defined (PERKEY_SAT)
+    #define PERKEY_SAT 0
+#endif
 
 // Define custom values if not defined in config.h
 #if STARTUP_ANIM_TIME < 0
@@ -64,16 +85,6 @@
 #ifndef BOOT_ANIM_Y
   #define BOOT_ANIM_Y 0
 #endif
-
-HSV          rgb_original_hsv;
-uint16_t     fade_timer;
-uint16_t     boot_timer;
-int8_t       fade_status = 0;
-int8_t       boot_status = 0;
-
-bool  RGB_MOD_FLAG;
-bool  RGB_UNDERGLOW_FLAG;
-bool  RGB_MATRIX_FLAG;
 
 HSV SPLASH_math2(HSV, int16_t, int16_t, uint8_t, uint16_t);
 void rgb_matrix_boot_anim(uint8_t );
