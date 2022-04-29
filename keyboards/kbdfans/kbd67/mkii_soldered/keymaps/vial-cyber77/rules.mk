@@ -23,5 +23,5 @@ KEY_OVERRIDE_ENABLE = no
 # user
 USER_NAME := bryan065
 SRC += \
-	rgb.c\
-	bryan065.c
+	bryan065.c \
+	rgb.c

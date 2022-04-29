@@ -34,6 +34,9 @@
 #define RGB_CUSTOM_TIMEOUT_DELAY 900000     // Timout delay in ms. Set to 15 minutes
 #define PREDEFINED_TAP_DANCE
 #define LOST_ARK
+#define PREDEFINED_TAP_DANCE
+//#define PERKEY_HUE 0
+//#define PERKEY_SAT 255
 
 /* Custom user specific features
 *
@@ -56,7 +59,6 @@
 // Vial config
 #define DYNAMIC_KEYMAP_LAYER_COUNT 4
 #define VIAL_TAP_DANCE_ENTRIES 1
-#define PREDEFINED_TAP_DANCE
 
 #define VIAL_KEYBOARD_UID {0x95, 0x31, 0xB4, 0xAD, 0xD9, 0x7A, 0xE9, 0x07}
 

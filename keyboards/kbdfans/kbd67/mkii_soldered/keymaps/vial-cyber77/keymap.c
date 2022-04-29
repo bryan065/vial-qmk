@@ -17,7 +17,74 @@
 
 #include QMK_KEYBOARD_H
 #include "bryan065.h"
+#include "rgb.h"
 #include "cyber77.h"
+
+/* Structure for RGB_MATRIX layer indicator
+ *   Note: Layer 0 aka base layer will never show any RGB layer indication
+ *
+ *   {FLAG, HUE, SATURATION, BRIGHTNESS}
+ *
+ *   FLAG:
+ *     TRUE  = Custom indicator color
+ *     FALSE = Transparent, will show user RGB mode/animation
+ *     Note: FLAG will have to be set to TRUE for any of the effects below to work
+ *
+ *   HUE:
+ *     Color of the layer indicator
+ *
+ *   SATURATION:
+ *     Saturation of the layer indicator
+ *
+ *   BRIGHTNESS:
+ *     0        = Don't show layer indicator (RGB's off)
+ *     0 to 255 = No effect
+ *
+ */
+struct RGB_MATRIX_INDICATOR indicator_matrix[8] = {
+    {NULL, 0, 0, 0 },                                   // Layer 0, base layer, no effect
+
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 1
+    { true, 0, 255, 0                            },     // Layer 2
+    { true, 0, 255, 0                            },     // Layer 3
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 4
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 5
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 6
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS}      // Layer 7
+};
+
+/* Structure for RGB underglow layer indicator
+ *   Note: Layer 0 aka base layer will never show any RGB layer indication
+ *
+ *   {FLAG, HUE, SATURATION, BRIGHTNESS}
+ *
+ *   FLAG:
+ *     TRUE  = Custom indicator color
+ *     FALSE = Transparent, will show user RGB mode/animation
+ *     Note: FLAG will have to be set to TRUE for any of the effects below to work
+ *
+ *   HUE:
+ *     Color of the layer indicator
+ *
+ *   SATURATION:
+ *     Saturation of the layer indicator
+ *
+ *   BRIGHTNESS:
+ *     0        = Don't show layer indicator (RGB's off)
+ *     0 to 255 = No effect
+ *
+ */
+struct RGB_MATRIX_INDICATOR indicator_underglow[8] = {
+    {NULL, 0, 0, 0 },                                   // Layer 0, base layer, no effect
+
+    {false,  0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 2
+    { true, 45, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 3
+    { true,  0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 4
+    {false,  0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 5
+    {false,  0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 6
+    {false,  0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 7
+    {false,  0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS}      // Layer 8
+};
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 	[0] = LAYOUT_all_ec( /* Base */
