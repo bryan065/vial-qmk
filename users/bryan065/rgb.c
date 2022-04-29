@@ -22,6 +22,86 @@
 
 #include "quantum.h"
 #include "rgb.h"
+#include "bryan065.h"
+#include <lib/lib8tion/lib8tion.h>
+
+/* Structure for RGB_MATRIX layer indicator
+ *   Note: Layer 0 aka base layer will never show any RGB layer indication
+ *
+ *   {FLAG, HUE, SATURATION, BRIGHTNESS}
+ *
+ *   FLAG:
+ *     TRUE  = Custom indicator color
+ *     FALSE = Transparent, will show user RGB mode/animation
+ *     Note: FLAG will have to be set to TRUE for any of the effects below to work
+ *
+ *   HUE:
+ *     Color of the layer indicator
+ *
+ *   SATURATION:
+ *     Saturation of the layer indicator
+ *
+ *   BRIGHTNESS:
+ *     0        = Don't show layer indicator (RGB's off)
+ *     0 to 255 = No effect
+ *
+ */
+__attribute__((weak))
+struct RGB_MATRIX_INDICATOR indicator_matrix[8] = {
+    {NULL, 0, 0, 0 },                                   // Layer 0, base layer, no effect
+
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 2
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 3
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 4
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 5
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 6
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 7
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS}      // Layer 8
+};
+
+/* Structure for RGB underglow layer indicator
+ *   Note: Layer 0 aka base layer will never show any RGB layer indication
+ *
+ *   {FLAG, HUE, SATURATION, BRIGHTNESS}
+ *
+ *   FLAG:
+ *     TRUE  = Custom indicator color
+ *     FALSE = Transparent, will show user RGB mode/animation
+ *     Note: FLAG will have to be set to TRUE for any of the effects below to work
+ *
+ *   HUE:
+ *     Color of the layer indicator
+ *
+ *   SATURATION:
+ *     Saturation of the layer indicator
+ *
+ *   BRIGHTNESS:
+ *     0        = Don't show layer indicator (RGB's off)
+ *     0 to 255 = No effect
+ *
+ */
+__attribute__((weak))
+struct RGB_MATRIX_INDICATOR indicator_underglow[8] = {
+    {NULL, 0, 0, 0 },                                   // Layer 0, base layer, no effect
+
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 2
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 3
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 4
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 5
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 6
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS},     // Layer 7
+    {false, 0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS}      // Layer 8
+};
+
+HSV          rgb_original_hsv;
+uint16_t     fade_timer;
+uint16_t     boot_timer;
+int8_t       fade_status = 0;
+int8_t       boot_status = 0;
+
+bool  RGB_MOD_FLAG;
+bool  RGB_UNDERGLOW_FLAG;
+bool  RGB_MATRIX_FLAG;
 
 //===============Custom Functions=========================//
 void rgb_matrix_fade_in(void) {
@@ -83,8 +163,6 @@ layer_state_t layer_state_set_user(layer_state_t state) {
 */
 //==========Per Layer RGB Matrix indicators========//
 void rgb_matrix_indicators_advanced_rgb(uint8_t led_min, uint8_t led_max) {
-    rgb_matrix_indicators_advanced_keymap(led_min, led_max);
-
     // Boot animation
     void rgb_matrix_boot_anim_runner(uint8_t originx, uint8_t originy) {
         for (uint8_t i = led_min; i < led_max; i++) {
@@ -140,31 +218,14 @@ void rgb_matrix_indicators_advanced_rgb(uint8_t led_min, uint8_t led_max) {
         HSV hsv = rgb_matrix_config.hsv;
         hsv.s   = 255;  // Ensure RGB colors are full saturation regardless of user's setting
 
-        /* Show layer indicators on underglow flagged LED's. If set to false, the user's RGB animation/mode will show through.
-         *  RGB_UNDERGLOW_FLAG
-         *
-         *  TRUE    = custom indicator color
-         *  FALSE   = transparent
-         */
-        switch (layer) {
-            case 0: // Layer 0 - BASE layer
-                // Nothing will work here, keep empty
-                break;
-            case 1: // Layer 1
-                RGB_UNDERGLOW_FLAG = false;
-                hsv.h = 0;  // Red but disabled so animation shows through
-                break;
-            case 2: // Layer 2
-                RGB_UNDERGLOW_FLAG = true;
-                hsv.h = 50; // Yellow
-                break;
-            case 3: // Layer 3
-                RGB_UNDERGLOW_FLAG = true;
-                hsv.h = 0;  // Red
-                break;
-            default:
-                RGB_UNDERGLOW_FLAG = false;
-                break;
+        // Apply underglow indicator
+        RGB_UNDERGLOW_FLAG  = indicator_underglow[layer].flag;
+        hsv.h               = indicator_underglow[layer].hsv_h;
+        hsv.s               = indicator_underglow[layer].hsv_s;
+
+        // Set hsv.v to zero if you want the layer indicator to be off completely
+        if (indicator_underglow[layer].hsv_v == 0) {
+            hsv.v = 0;
         }
 
         //apply the colors to the layers, if configured. Otherwise, the user's RGB mode will show through
@@ -207,8 +268,6 @@ void rgb_matrix_indicators_advanced_rgb(uint8_t led_min, uint8_t led_max) {
                      *  hsv.s = saturation
                      *  hsv.v = DO NOT CHANGE
                      */
-                    uint8_t PERKEY_HUE = 0;
-                    uint8_t PERKEY_SAT = 0;
                     if (keycheck > KC_TRNS) {
 
                         // Per key overrides
@@ -267,42 +326,20 @@ void rgb_matrix_indicators_advanced_rgb(uint8_t led_min, uint8_t led_max) {
                         RGB_MATRIX_INDICATOR_SET_COLOR(index, rgb.r, rgb.g, rgb.b);
                     }
                     else {
-                        /* If key is not configured aka KC_TRNS, allow RGB_MATRIX animation to show through or set per layer indicator for RGB_MATRIX
-                         *  RGB_MATRIX_FLAG
-                         *
-                         *  TRUE    = custom indicator color
-                         *  FALSE   = transparent
-                         *
-                         *  hsv.h   = hue
-                         *  hsv.s   = saturation
-                         *  hsv.v   = brightness (set to 0 to disable layer indicator AND user RGB color)
-                         */
-
+                        //RGB_MATRIX
                         #ifdef DISABLE_LAYER_INDICATOR_MATRIX
                             // Hide RGB_MATRIX animations
                             RGB_MATRIX_FLAG = true;
                             hsv.v = 0;
                         #else
                             // Per layer indicator ONLY on the RGB_MATRIX (not underglow)
-                            switch (layer) {
-                            case 0: // Layer 0 - BASE layer
-                                // Nothing will work here, keep empty
-                                break;
-                            case 1: // Layer 1
-                                RGB_MATRIX_FLAG = false;
-                                hsv.h = 45;
-                                //hsv.v = 0;
-                                break;
-                            case 2: // Layer 2
-                                RGB_MATRIX_FLAG = true;
-                                hsv.h = 90;
+                            RGB_MATRIX_FLAG = indicator_matrix[layer].flag;
+                            hsv.h           = indicator_matrix[layer].hsv_h;
+                            hsv.s           = indicator_matrix[layer].hsv_s;
+
+                            // Set hsv.v to zero if you want the layer indicator to be off completely
+                            if (indicator_matrix[layer].hsv_v == 0) {
                                 hsv.v = 0;
-                                break;
-                            case 3: // Layer 3
-                                RGB_MATRIX_FLAG = true;
-                                hsv.h = 120;
-                                hsv.v = 0;
-                                break;
                             }
                         #endif
 
@@ -345,6 +382,8 @@ void rgb_matrix_indicators_advanced_rgb(uint8_t led_min, uint8_t led_max) {
             RGB_MATRIX_INDICATOR_SET_COLOR(5, rgb.r, rgb.g, rgb.b);                     // Assuming num lock is at led #5
         } // End of caps/num lock code
     #endif
+
+    rgb_matrix_indicators_advanced_keymap(led_min, led_max);
 }
 
 /* fade_status
@@ -354,8 +393,6 @@ void rgb_matrix_indicators_advanced_rgb(uint8_t led_min, uint8_t led_max) {
 */
 //=============================================//
 void rgb_matrix_indicators_rgb(void) {
-    rgb_matrix_indicators_keymap();
-
     // Fade animation code
     HSV hsv = rgb_matrix_get_hsv();
     switch(fade_status) {
@@ -403,6 +440,7 @@ void rgb_matrix_indicators_rgb(void) {
             #endif
         }
     #endif // End of custom RGB timeout code - FADE OUT
+    rgb_matrix_indicators_keymap();
 }
 
 //==========Per Layer RGB Matrix indicators========//
@@ -457,8 +495,6 @@ bool process_record_rgb(uint16_t keycode, keyrecord_t *record) {
 
 //==========RGB init/suspend functions========//
 void keyboard_post_init_rgb(void) {
-    keyboard_post_init_keymap();
-
     // Start timer for custom rgb timeout
     #if (RGB_DISABLE_TIMEOUT == 0) && (RGB_CUSTOM_TIMEOUT_DELAY > 0)
         #if (defined (RGB_MATRIX_ENABLE)) || (defined (RGBLIGHT_ENABLE))
@@ -470,14 +506,14 @@ void keyboard_post_init_rgb(void) {
     #if (defined (RGB_MATRIX_ENABLE)) || (defined (RGBLIGHT_ENABLE))
         rgb_matrix_boot_anim(1);
     #endif
+    keyboard_post_init_keymap();
 }
 
 void suspend_wakeup_init_rgb(void) {
-    suspend_wakeup_init_keymap();
-
     // Fade in RGB when first plugging in kb or on resume from sleep
     #if (defined (RGB_MATRIX_ENABLE)) || (defined (RGBLIGHT_ENABLE))
         rgb_matrix_boot_anim(1);
     #endif
+    suspend_wakeup_init_keymap();
 }
 //=======RGB init/suspend functions End=======//
