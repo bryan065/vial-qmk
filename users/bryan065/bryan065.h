@@ -17,12 +17,7 @@
 
 #pragma once
 
-#ifdef __AVR__
-#include <avr/wdt.h>
-#endif
-
 #include "quantum.h"
-#include "version.h"
 
 #if VENDOR_ID == 0xA103
   #if PRODUCT == Cyber77
