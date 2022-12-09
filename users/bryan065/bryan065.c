@@ -34,6 +34,9 @@ __attribute__((weak)) void suspend_wakeup_init_keymap(void) {}
 __attribute__((weak)) void suspend_wakeup_init_rgb(void) { suspend_wakeup_init_keymap(); }
 void                       suspend_wakeup_init_user(void) {
     suspend_wakeup_init_rgb();
+
+    // Clear any stuck keys on init wakeup
+    clear_keyboard();
 }
 
 // Userspace and keymap pre init
